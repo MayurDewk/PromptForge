@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>PromptForge</AssemblyName>
+    <RootNamespace>PromptForge.Mac</RootNamespace>
+    <!-- Keep in step with PromptForge.App.csproj: the release workflow checks both against the tag. -->
+    <Version>1.1.1</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Product>PromptForge</Product>
+    <Authors>Maneet Arvind Mehta</Authors>
+    <Copyright>Copyright (c) 2026 Maneet Arvind Mehta. MIT License.</Copyright>
+    <RepositoryUrl>https://github.com/Maneet7805/PromptForge</RepositoryUrl>
+    <Description>Rewrites rough prompts into clear ones on a hotkey.</Description>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <!-- Published as a normal folder inside PromptForge.app (see installer/macos/build-app.sh), not as a
+         single file: single-file apps extract native libraries to a writable temp folder at startup,
+         which breaks code signing and is a place another process could tamper with. -->
+    <SelfContained>true</SelfContained>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PromptForge.Core\PromptForge.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\PromptForge.png" />
+  </ItemGroup>
+
+</Project>

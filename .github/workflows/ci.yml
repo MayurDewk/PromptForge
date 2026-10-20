@@ -36,3 +36,26 @@ jobs:
           name: PromptForge-${{ github.sha }}-win-x64
           path: publish/PromptForge.exe
           retention-days: 14
+
+  build-macos:
+    name: Build and test (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test tests/PromptForge.Core.Tests -c Release --logger "console;verbosity=normal"
+
+      - name: Build app (ad-hoc signed)
+        run: installer/macos/build-app.sh arm64
+
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: PromptForge-${{ github.sha }}-macOS-arm64
+          path: dist/macos-arm64/PromptForge-macOS-arm64.zip
+          retention-days: 14

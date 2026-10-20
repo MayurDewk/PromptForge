@@ -195,6 +195,38 @@ public class SettingsTests
         Assert.Equal("https://example.com/v1/", endpoints[1].BaseUrl);
     }
 
+    [Theory]
+    [InlineData("http://example.com/v1", true)]       // key would travel unencrypted
+    [InlineData("ftp://example.com/v1", true)]
+    [InlineData("https://user:pw@example.com/v1", true)]
+    [InlineData("not a url", true)]
+    [InlineData("http://localhost:1234/v1", false)]   // LM Studio on this machine
+    [InlineData("http://127.0.0.1:8080/v1", false)]
+    [InlineData("https://example.com/v1", false)]
+    public void Custom_urls_that_would_leak_the_key_are_refused(string url, bool refused)
+    {
+        var secrets = new MemorySecrets();
+        secrets.Set("custom", "abc");
+        var settings = new AppSettings
+        {
+            Primary = new EndpointSettings { Provider = "custom", Model = "m", BaseUrl = url },
+            Fallback = new EndpointSettings { Enabled = false },
+        };
+        if (refused) Assert.Throws<InsecureEndpointException>(() => EndpointResolver.Resolve(settings, secrets));
+        else Assert.Single(EndpointResolver.Resolve(settings, secrets));
+    }
+
+    [Fact]
+    public void Keyless_local_network_ollama_is_allowed_over_http()
+    {
+        var settings = new AppSettings
+        {
+            Primary = new EndpointSettings { Provider = "ollama", Model = "qwen3:4b", BaseUrl = "http://192.168.1.20:11434/v1" },
+            Fallback = new EndpointSettings { Enabled = false },
+        };
+        Assert.Single(EndpointResolver.Resolve(settings, new MemorySecrets()));
+    }
+
     [Fact]
     public void Judge_uses_its_own_provider_when_the_key_is_saved()
     {

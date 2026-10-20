@@ -1,4 +1,5 @@
 using PromptForge.App.Native;
+using PromptForge.Core.Voice;
 
 namespace PromptForge.App.TextAccess;
 
@@ -158,7 +159,7 @@ internal static class TextBridge
     /// <summary>Types text at the cursor of the current foreground window (used for dictation).</summary>
     public static async Task<ReplaceResult> InsertAsync(IntPtr hwnd, string text, bool singleLine)
     {
-        if (singleLine) text = text.Replace("\r", " ").Replace("\n", " ");
+        text = TranscriptSanitizer.Clean(text, singleLine);
         if (!Win32.IsWindow(hwnd) || !await Foreground.BringToFrontAsync(hwnd))
             return CopyInstead(text, "Couldn't return to the text box, so the text was copied. Paste it with Ctrl+V.");
 

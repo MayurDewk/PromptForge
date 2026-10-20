@@ -10,6 +10,9 @@ namespace PromptForge.App.TextAccess;
 /// </summary>
 internal sealed class ClipboardSnapshot
 {
+    /// <summary>Formats password managers set on secrets they will clear on their own.</summary>
+    private static readonly HashSet<string> SensitiveFormats = ["ExcludeClipboardContentFromMonitorProcessing", "Clipboard Viewer Ignore"];
+
     private readonly List<(string Format, object Data)> _items;
 
     private ClipboardSnapshot(List<(string, object)> items) => _items = items;
@@ -43,8 +46,11 @@ internal sealed class ClipboardSnapshot
     {
         try
         {
-            if (_items.Count == 0)
+            // A password manager clears its secret later only if the clipboard still holds what it wrote.
+            // Restoring would leave the password behind as fresh clipboard data, so it is cleared instead.
+            if (_items.Count == 0 || _items.Any(i => SensitiveFormats.Contains(i.Format)))
             {
+                if (_items.Count > 0) Log.Info("clipboard held excluded-from-history data; cleared instead of restored");
                 Retry(() => { Clipboard.Clear(); return true; });
                 return;
             }

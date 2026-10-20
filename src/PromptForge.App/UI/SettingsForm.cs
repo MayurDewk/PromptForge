@@ -344,7 +344,7 @@ internal sealed class SettingsForm : Form
             _testResult.ForeColor = Color.FromArgb(38, 150, 80);
             _testResult.Text = $"Connected to {endpoint.Label} in {sw.ElapsedMilliseconds} ms.";
         }
-        catch (Exception ex) when (ex is LlmException or MissingKeyException or InvalidOperationException)
+        catch (Exception ex) when (ex is LlmException or EndpointConfigException or InvalidOperationException)
         {
             _testResult.ForeColor = Color.FromArgb(200, 60, 60);
             _testResult.Text = ex is LlmException llm ? $"{llm.UserMessage} ({llm.Message})" : ex.Message;

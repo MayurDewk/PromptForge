@@ -115,6 +115,8 @@ public static class SettingsStore
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(settings, JsonOptions));
+        // On macOS and Linux new files are world-readable by default; settings can hold personal context.
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(temp, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         File.Move(temp, path, overwrite: true);
     }
 }

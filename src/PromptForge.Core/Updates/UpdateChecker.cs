@@ -4,8 +4,8 @@ using System.Text.Json;
 
 namespace PromptForge.Core.Updates;
 
-/// <summary>A published release that is newer than the running copy.</summary>
-public sealed record ReleaseInfo(Version Version, string Tag, string ExeUrl, string ChecksumsUrl, string PageUrl);
+/// <summary>A published release that is newer than the running copy. AssetUrl is this platform's download (exe or zip).</summary>
+public sealed record ReleaseInfo(Version Version, string Tag, string AssetUrl, string ChecksumsUrl, string PageUrl);
 
 public sealed class UpdateException(string message, Exception? inner = null) : Exception(message, inner);
 
@@ -13,12 +13,17 @@ public sealed class UpdateException(string message, Exception? inner = null) : E
 /// Checks GitHub Releases for a newer PromptForge and downloads it with its SHA-256 verified.
 /// Sends one anonymous request to api.github.com; no prompt text, settings or keys are involved.
 /// Installing is left to the caller (the downloaded exe installs itself like a manual download).
+/// Downloads are only accepted from this repository's GitHub release URLs, and are size-capped.
 /// </summary>
-public sealed class UpdateChecker(HttpClient http, string repository = UpdateChecker.DefaultRepository)
+public sealed class UpdateChecker(HttpClient http, string repository = UpdateChecker.DefaultRepository, string assetName = UpdateChecker.ExeAssetName)
 {
     public const string DefaultRepository = "Maneet7805/PromptForge";
     public const string ExeAssetName = "PromptForge.exe";
     public const string ChecksumsAssetName = "SHA256SUMS.txt";
+
+    /// <summary>Far above any real release; stops a bad response from filling the disk.</summary>
+    internal const long MaxDownloadBytes = 400L * 1024 * 1024;
+    private const int MaxChecksumsChars = 64 * 1024;
 
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(5);
@@ -39,7 +44,7 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
             if (!response.IsSuccessStatusCode)
                 throw new UpdateException($"GitHub answered {(int)response.StatusCode} when checking for updates.");
             var json = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
-            var latest = ParseLatestRelease(json);
+            var latest = ParseLatestRelease(json, assetName, repository);
             return latest is not null && IsNewer(latest.Version, currentVersion) ? latest : null;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
@@ -49,7 +54,7 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
     }
 
     /// <summary>
-    /// Downloads the release exe into <paramref name="directory"/> and checks it against the release's
+    /// Downloads the release asset into <paramref name="directory"/> and checks it against the release's
     /// SHA256SUMS.txt. Throws <see cref="UpdateException"/> (and deletes the file) if they don't match.
     /// </summary>
     public async Task<string> DownloadVerifiedAsync(ReleaseInfo release, string directory, string currentVersion, CancellationToken ct = default)
@@ -57,23 +62,25 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(DownloadTimeout);
         Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, ExeAssetName);
+        var path = Path.Combine(directory, assetName);
 
         try
         {
             var sums = await GetStringAsync(release.ChecksumsUrl, currentVersion, timeout.Token).ConfigureAwait(false);
-            var expected = FindChecksum(sums, ExeAssetName)
-                ?? throw new UpdateException($"The release has no checksum for {ExeAssetName}, so it wasn't installed.");
+            var expected = FindChecksum(sums, assetName)
+                ?? throw new UpdateException($"The release has no checksum for {assetName}, so it wasn't installed.");
 
-            using (var request = new HttpRequestMessage(HttpMethod.Get, release.ExeUrl))
+            using (var request = new HttpRequestMessage(HttpMethod.Get, release.AssetUrl))
             {
                 AddHeaders(request, currentVersion);
                 using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                     throw new UpdateException($"Downloading the update failed ({(int)response.StatusCode}).");
+                if (response.Content.Headers.ContentLength > MaxDownloadBytes)
+                    throw new UpdateException("The update is unexpectedly large, so it wasn't downloaded.");
                 await using var source = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
                 await using var file = File.Create(path);
-                await source.CopyToAsync(file, timeout.Token).ConfigureAwait(false);
+                await CopyCappedAsync(source, file, timeout.Token).ConfigureAwait(false);
             }
 
             string actual;
@@ -87,6 +94,11 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
             }
             return path;
         }
+        catch (UpdateException)
+        {
+            TryDelete(path);
+            throw;
+        }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException && !ct.IsCancellationRequested)
         {
             TryDelete(path);
@@ -94,9 +106,26 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
         }
     }
 
-    /// <summary>Reads the fields we need from GitHub's "latest release" JSON. Null if the release lacks the exe or checksums.</summary>
-    public static ReleaseInfo? ParseLatestRelease(string json)
+    private static async Task CopyCappedAsync(Stream source, Stream destination, CancellationToken ct)
     {
+        var buffer = new byte[81920];
+        long total = 0;
+        int read;
+        while ((read = await source.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+        {
+            total += read;
+            if (total > MaxDownloadBytes) throw new UpdateException("The update is unexpectedly large, so it wasn't downloaded.");
+            await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Reads the fields we need from GitHub's "latest release" JSON. Null if the release lacks the asset or
+    /// checksums, or if either would be downloaded from anywhere other than this repository's releases.
+    /// </summary>
+    public static ReleaseInfo? ParseLatestRelease(string json, string assetName = ExeAssetName, string repository = DefaultRepository)
+    {
+        var allowedPrefix = $"https://github.com/{repository}/releases/download/";
         try
         {
             using var doc = JsonDocument.Parse(json);
@@ -105,20 +134,20 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
             var tag = Str(root, "tag_name");
             if (tag is null || !TryParseVersion(tag, out var version)) return null;
 
-            string? exe = null, sums = null;
+            string? assetUrl = null, sums = null;
             if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
             {
                 foreach (var asset in assets.EnumerateArray())
                 {
                     var name = Str(asset, "name");
                     var url = Str(asset, "browser_download_url");
-                    if (url is null || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) continue;
-                    if (string.Equals(name, ExeAssetName, StringComparison.OrdinalIgnoreCase)) exe = url;
+                    if (url is null || !url.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase) || url.Contains("..", StringComparison.Ordinal)) continue;
+                    if (string.Equals(name, assetName, StringComparison.OrdinalIgnoreCase)) assetUrl = url;
                     else if (string.Equals(name, ChecksumsAssetName, StringComparison.OrdinalIgnoreCase)) sums = url;
                 }
             }
-            if (exe is null || sums is null) return null;
-            return new ReleaseInfo(version, tag, exe, sums, Str(root, "html_url") ?? "");
+            if (assetUrl is null || sums is null) return null;
+            return new ReleaseInfo(version, tag, assetUrl, sums, Str(root, "html_url") ?? "");
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
@@ -171,7 +200,8 @@ public sealed class UpdateChecker(HttpClient http, string repository = UpdateChe
         using var response = await http.SendAsync(request, ct).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
             throw new UpdateException($"Downloading the release checksums failed ({(int)response.StatusCode}).");
-        return await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        var text = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        return text.Length > MaxChecksumsChars ? throw new UpdateException("The release checksums file is malformed.") : text;
     }
 
     // GitHub rejects API requests without a User-Agent.

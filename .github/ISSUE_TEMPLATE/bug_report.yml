@@ -32,10 +32,12 @@ body:
   - type: dropdown
     id: windows
     attributes:
-      label: Windows version
+      label: Operating system
       options:
         - Windows 11
         - Windows 10
+        - macOS (Apple silicon)
+        - macOS (Intel)
     validations:
       required: true
   - type: dropdown

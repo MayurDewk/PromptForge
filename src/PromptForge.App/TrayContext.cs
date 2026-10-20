@@ -250,7 +250,7 @@ internal sealed class TrayContext : ApplicationContext
         {
             return EndpointResolver.Resolve(_services.Settings, _services.Secrets).Count > 0;
         }
-        catch (MissingKeyException)
+        catch (EndpointConfigException)
         {
             return false;
         }

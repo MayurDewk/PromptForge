@@ -13,7 +13,8 @@ internal sealed class AppServices : IDisposable
         Directory.CreateDirectory(AppPaths.DataDir);
         Settings = SettingsStore.Load(AppPaths.SettingsFile, Log.Warn);
         Secrets = new DpapiSecretStore(AppPaths.SecretsFile);
-        Http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan }; // per-request timeouts are applied by the client
+        // Per-request timeouts are applied by the client. Replies are small; the cap stops a bad endpoint exhausting memory.
+        Http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan, MaxResponseContentBufferSize = 16 * 1024 * 1024 };
         Client = new OpenAiCompatibleClient(Http);
         Optimizer = new PromptOptimizer(Client);
     }

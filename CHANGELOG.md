@@ -5,6 +5,7 @@ All notable changes to PromptForge are listed here. The format follows [Keep a C
 ## [Unreleased]
 
 ### Added
+- **macOS app** (macOS 13+, Apple silicon and Intel): a menu bar app with the same optimise, selection and voice shortcuts (⌃⌥P, ⌃⌥⇧P, ⌃⌥D), review window, settings and quality check. Keys live in the login Keychain, start at login uses Login Items, and releases include `PromptForge-macOS-arm64.zip` and `PromptForge-macOS-x64.zip`. Build it with `installer/macos/build-app.sh`.
 - Quality check: each case runs 3 times by default (`--repeat N` to change), and the report shows the pass rate per case, lowest first, plus how many cases passed every run, failed every run, or were mixed.
 - Quality check: a judge model set separately in Settings → Data (Gemini by default, using the Gemini key from the Model tab). Without its key, the main model's fallback grades and the report says the judge isn't independent.
 - Quality check: the judge also flags rewrites written as the AI's reply and requests the draft didn't make (extra deliverables, answer formats, "ask me first" steps), and its intent check covers statements, answers and standing instructions.
@@ -17,6 +18,13 @@ All notable changes to PromptForge are listed here. The format follows [Keep a C
 - Quality check: runs that errored (rate limits, network failures) no longer count as failures. Comparisons leave them out, mark a case "not comparable" when errors leave it too few clean runs, and report how many runs errored on each side; pass rates in the report leave them out too.
 - Quality check: a rate limit no longer turns the rest of the run into errors. The runner waits out short limits (up to 20 minutes, 3 times per call) and retries the same run; when the day's allowance is gone it stops cleanly, keeps what finished, and says which cases didn't run in `progress.txt` and the report.
 - Quality check: a judged run the judge couldn't grade is now an error instead of a pass.
+
+### Security
+- An API key is never sent over plain `http://` to another machine: a custom or Ollama base URL must use `https://` unless it points at this computer or no key is set. Other schemes and URLs with a username or password are refused too.
+- Updates are only downloaded from this repository's GitHub release URLs, and downloads are size-capped.
+- Responses from model providers are capped at 16 MB, so a misbehaving endpoint can't exhaust memory.
+- Dictated text has control characters removed before it is pasted (and line breaks too, in terminals), so it can't carry terminal escape sequences or run commands.
+- On macOS and Linux, `settings.json` is written readable only by your account.
 
 ### Removed
 - The phrase list that flagged rewrites written in the AI's voice. It only caught wordings we had thought of; the judge checks this now.

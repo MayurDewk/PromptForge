@@ -50,7 +50,7 @@ Quit the installed PromptForge first, because only one copy can run at a time.
 
 1. Fork the repo and create a branch from `main`.
 2. Keep each pull request to one change, and add or update tests in `tests/PromptForge.Core.Tests` for anything in `PromptForge.Core`.
-3. Make sure `dotnet test` passes. CI runs it on Windows for every pull request.
+3. Make sure `dotnet test` passes. CI runs it on Windows and macOS for every pull request.
 4. If you change the system prompt or optimiser behaviour, run the quality check (Settings → Data → *Run quality check*) and paste the before/after pass counts in the pull request.
 5. For app (UI or Win32) changes, say which apps you tested in. Notepad, a browser chat and Word cover most cases.
 6. Add a line under an `Unreleased` heading in `CHANGELOG.md`.

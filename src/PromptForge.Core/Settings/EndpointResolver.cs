@@ -2,7 +2,7 @@ using PromptForge.Core.Llm;
 
 namespace PromptForge.Core.Settings;
 
-/// <summary>Stores API keys by provider id. The Windows app implements this with DPAPI.</summary>
+/// <summary>Stores API keys by provider id. The Windows app implements this with DPAPI, the Mac app with the Keychain.</summary>
 public interface ISecretStore
 {
     string? Get(string providerId);
@@ -10,11 +10,17 @@ public interface ISecretStore
     void Clear();
 }
 
+/// <summary>An endpoint can't be used as configured. The message is written for the user.</summary>
+public abstract class EndpointConfigException(string message) : Exception(message);
+
 public sealed class MissingKeyException(string providerName, string? keyUrl)
-    : Exception($"Add your {providerName} API key in Settings → Model." + (keyUrl is null ? "" : $" Get a free one at {keyUrl}"))
+    : EndpointConfigException($"Add your {providerName} API key in Settings → Model." + (keyUrl is null ? "" : $" Get a free one at {keyUrl}"))
 {
     public string? KeyUrl { get; } = keyUrl;
 }
+
+/// <summary>A base URL that isn't http(s), or that would send an API key unencrypted to another machine.</summary>
+public sealed class InsecureEndpointException(string message) : EndpointConfigException(message);
 
 public static class EndpointResolver
 {
@@ -22,7 +28,7 @@ public static class EndpointResolver
     public static IReadOnlyList<LlmEndpoint> Resolve(AppSettings settings, ISecretStore secrets)
     {
         var list = new List<LlmEndpoint>();
-        MissingKeyException? missing = null;
+        EndpointConfigException? missing = null;
 
         foreach (var cfg in new[] { settings.Primary, settings.Fallback })
         {
@@ -66,7 +72,7 @@ public static class EndpointResolver
     public static LlmEndpoint? ResolveVoice(AppSettings settings, ISecretStore secrets) =>
         Build(settings.Voice.Provider, settings.Voice.Model, settings.Voice.BaseUrl, secrets, out _);
 
-    public static LlmEndpoint? Build(string providerId, string model, string? baseUrl, ISecretStore secrets, out MissingKeyException? keyProblem)
+    public static LlmEndpoint? Build(string providerId, string model, string? baseUrl, ISecretStore secrets, out EndpointConfigException? keyProblem)
     {
         keyProblem = null;
         var preset = ProviderPresets.Get(providerId);
@@ -78,6 +84,26 @@ public static class EndpointResolver
             keyProblem = new MissingKeyException(preset.DisplayName, preset.KeyUrl);
             return null;
         }
+        if (UrlProblem(url, hasKey: !string.IsNullOrWhiteSpace(key)) is { } problem)
+        {
+            keyProblem = new InsecureEndpointException(problem);
+            return null;
+        }
         return new LlmEndpoint(preset, url, model.Trim(), key);
+    }
+
+    /// <summary>
+    /// Why a base URL can't be used, or null. Only http(s) is allowed, and an API key is never sent over
+    /// plain http except to this machine (a local Ollama or LM Studio), where it can't be read off the network.
+    /// </summary>
+    public static string? UrlProblem(string url, bool hasKey)
+    {
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http") || string.IsNullOrEmpty(uri.Host))
+            return $"\"{url}\" isn't a valid http:// or https:// address.";
+        if (!string.IsNullOrEmpty(uri.UserInfo))
+            return "Don't put a username or password in the base URL; save the key in Settings → Model instead.";
+        if (uri.Scheme == "http" && hasKey && !uri.IsLoopback)
+            return $"{uri.Host} uses http://, which would send your API key unencrypted. Use an https:// address.";
+        return null;
     }
 }

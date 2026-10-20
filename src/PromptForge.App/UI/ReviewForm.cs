@@ -187,7 +187,7 @@ internal sealed class ReviewForm : Form
         {
             // Cancelled by Esc, Re-run or closing.
         }
-        catch (Exception ex) when (ex is OptimizeException or MissingKeyException)
+        catch (Exception ex) when (ex is OptimizeException or EndpointConfigException)
         {
             if (!cts.IsCancellationRequested && !IsDisposed) ShowError(ex.Message);
         }

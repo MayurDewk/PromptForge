@@ -39,7 +39,7 @@ public class UpdateCheckerTests
         var release = UpdateChecker.ParseLatestRelease(ReleaseJson());
         Assert.NotNull(release);
         Assert.Equal(new Version(1, 1, 0), release.Version);
-        Assert.Equal(ExeUrl, release.ExeUrl);
+        Assert.Equal(ExeUrl, release.AssetUrl);
         Assert.Equal(SumsUrl, release.ChecksumsUrl);
     }
 
@@ -58,6 +58,52 @@ public class UpdateCheckerTests
     public void Bad_responses_are_ignored(string json)
     {
         Assert.Null(UpdateChecker.ParseLatestRelease(json));
+    }
+
+    [Theory]
+    [InlineData("https://evil.example/releases/download/v1.1.0/PromptForge.exe")]
+    [InlineData("https://github.com/someone-else/PromptForge/releases/download/v1.1.0/PromptForge.exe")]
+    [InlineData("http://github.com/Maneet7805/PromptForge/releases/download/v1.1.0/PromptForge.exe")]
+    [InlineData("https://github.com/Maneet7805/PromptForge/releases/download/../../../x/PromptForge.exe")]
+    public void Ignores_assets_hosted_outside_this_repository(string url)
+    {
+        var json = ReleaseJson().Replace(ExeUrl, url);
+        Assert.Null(UpdateChecker.ParseLatestRelease(json));
+    }
+
+    [Fact]
+    public void Picks_the_platform_asset_by_name()
+    {
+        const string zipUrl = "https://github.com/Maneet7805/PromptForge/releases/download/v1.1.0/PromptForge-macOS-arm64.zip";
+        var json = ReleaseJson().Replace("\"assets\":[", "\"assets\":[{\"name\":\"PromptForge-macOS-arm64.zip\",\"browser_download_url\":\"" + zipUrl + "\"},");
+        Assert.Equal(zipUrl, UpdateChecker.ParseLatestRelease(json, "PromptForge-macOS-arm64.zip")!.AssetUrl);
+        Assert.Null(UpdateChecker.ParseLatestRelease(json, "PromptForge-macOS-x64.zip"));
+    }
+
+    [Fact]
+    public async Task Download_refuses_an_oversized_file()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "pf-update-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var checker = new UpdateChecker(new HttpClient(new FakeHandler(r =>
+            {
+                if (r.RequestUri!.ToString() == SumsUrl) return Text($"{new string('0', 64)}  PromptForge.exe\n");
+                var content = new ByteArrayContent([1]);
+                content.Headers.ContentLength = UpdateChecker.MaxDownloadBytes + 1;
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+            })));
+            var release = UpdateChecker.ParseLatestRelease(ReleaseJson())!;
+
+            var ex = await Assert.ThrowsAsync<UpdateException>(() => checker.DownloadVerifiedAsync(release, dir, "1.0.0"));
+
+            Assert.Contains("large", ex.Message);
+            Assert.False(File.Exists(Path.Combine(dir, "PromptForge.exe")));
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
     }
 
     [Fact]

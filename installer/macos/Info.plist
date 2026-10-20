@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>PromptForge</string>
+  <key>CFBundleDisplayName</key>
+  <string>PromptForge</string>
+  <key>CFBundleIdentifier</key>
+  <string>io.github.maneet7805.promptforge</string>
+  <key>CFBundleExecutable</key>
+  <string>PromptForge</string>
+  <key>CFBundleIconFile</key>
+  <string>PromptForge.icns</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__VERSION__</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+  <!-- Menu bar app: no Dock icon and no main menu. -->
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright (c) 2026 Maneet Arvind Mehta. MIT License.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>PromptForge listens only while you hold or toggle the voice shortcut, and sends that recording to your voice provider to transcribe it.</string>
+</dict>
+</plist>

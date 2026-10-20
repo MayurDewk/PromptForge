@@ -130,7 +130,7 @@ internal sealed class OptimizeController(AppServices services)
                     return new ReviewDecision(ReviewAction.Accept, result.Prompt);
                 context = context with { Preloaded = result };
             }
-            catch (Exception ex) when (ex is OptimizeException or MissingKeyException)
+            catch (Exception ex) when (ex is OptimizeException or EndpointConfigException)
             {
                 services.Notify(ex.Message, ToolTipIcon.Warning);
                 return null;

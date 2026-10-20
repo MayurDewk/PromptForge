@@ -6,12 +6,12 @@
 
 **Turn the rough prompt you're typing into a clear one without leaving the app you're in.**
 
-Type naturally, press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>, review the rewrite, press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.
+Type naturally, press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> (Mac: <kbd>⌃</kbd><kbd>⌥</kbd><kbd>P</kbd>), review the rewrite, press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> (Mac: <kbd>⌘</kbd><kbd>↩</kbd>).
 
 [![Latest release](https://img.shields.io/github/v/release/Maneet7805/PromptForge?label=download&color=6d4aff)](https://github.com/Maneet7805/PromptForge/releases/latest)
 [![CI](https://github.com/Maneet7805/PromptForge/actions/workflows/ci.yml/badge.svg)](https://github.com/Maneet7805/PromptForge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078d4)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20%7C%20macOS%2013%2B-0078d4)
 ![.NET 10](https://img.shields.io/badge/.NET-10-512bd4)
 
 [**Download**](https://github.com/Maneet7805/PromptForge/releases/latest) · [Quick start](#quick-start) · [How it works](#how-it-works) · [FAQ](#troubleshooting) · [Contributing](CONTRIBUTING.md)
@@ -24,7 +24,7 @@ Type naturally, press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>, review the re
 
 ## Why
 
-Most prompts are typed in a hurry: no deliverable, missing context, details buried in a run-on sentence. PromptForge is a small Windows tray app that fixes that in place, following [Anthropic's prompt engineering guidance](https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview). It never sends anything for you: you always see the rewrite first and decide.
+Most prompts are typed in a hurry: no deliverable, missing context, details buried in a run-on sentence. PromptForge is a small Windows tray app and Mac menu bar app that fixes that in place, following [Anthropic's prompt engineering guidance](https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview). It never sends anything for you: you always see the rewrite first and decide.
 
 ## Features
 
@@ -35,7 +35,7 @@ Most prompts are typed in a hurry: no deliverable, missing context, details buri
 - **Your clipboard is safe.** It's saved before and restored after every operation.
 - **Voice dictation.** Tap or hold a shortcut, speak, and the transcript is typed (or optimised) for you.
 - **Free to run.** Uses [Groq's](https://console.groq.com) free API tier by default. No card, no account with us, no server.
-- **Private by design.** Keys are encrypted with Windows DPAPI, and no prompt text is ever logged or stored.
+- **Private by design.** Keys are encrypted with Windows DPAPI or kept in the macOS Keychain, and no prompt text is ever logged or stored.
 
 <details>
 <summary><b>See the word-level diff view</b></summary>
@@ -44,6 +44,8 @@ Most prompts are typed in a hurry: no deliverable, missing context, details buri
 </details>
 
 ## Quick start
+
+### Windows
 
 1. **Get a free API key** at <https://console.groq.com/keys>. It takes about a minute, and no card is needed.
 2. **Download [`PromptForge.exe`](https://github.com/Maneet7805/PromptForge/releases/latest/download/PromptForge.exe)** from the latest release and double-click it.
@@ -54,6 +56,20 @@ Most prompts are typed in a hurry: no deliverable, missing context, details buri
 
 **Update:** from 1.1.0 on, PromptForge checks for a new release once a day and shows a notification. Click it (or **Update to …** in the tray menu), and it downloads the new exe, checks it against the release's `SHA256SUMS.txt`, and asks **Yes** to update. Your settings and keys are kept. You can also download the newer `PromptForge.exe` yourself, run it, and choose **Yes**. To turn the daily check off: Settings → General.
 **Uninstall:** run `uninstall.cmd` from the release zip. It removes the app, the shortcut and start-with-Windows, and asks whether to delete settings, keys and logs.
+
+### Mac
+
+1. **Get a free API key** at <https://console.groq.com/keys>.
+2. **Download** `PromptForge-macOS-arm64.zip` (Apple silicon: M1 and later) or `PromptForge-macOS-x64.zip` (Intel) from the [latest release](https://github.com/Maneet7805/PromptForge/releases/latest), unzip it, and drag **PromptForge.app** into **Applications**. It needs macOS 13 (Ventura) or later.
+3. Release builds aren't notarized by Apple, so the first time, **right-click PromptForge.app → Open → Open**. (Or verify the zip against `SHA256SUMS.txt` first: `shasum -a 256 PromptForge-macOS-arm64.zip`.)
+4. PromptForge appears in the menu bar, not the Dock. macOS asks you to allow it under **System Settings → Privacy & Security → Accessibility**: that's what lets it copy your text and paste the result. It never sees keystrokes other than its own shortcuts.
+5. Settings opens on the **Model** tab. Paste your key (it's stored in your login Keychain), click **Test connection**, then **Save**. Turn on **Open PromptForge when you log in** in General if you like.
+6. Click into any text box, type a rough prompt, and press <kbd>⌃</kbd><kbd>⌥</kbd><kbd>P</kbd>.
+
+On a Mac, the same shortcuts use Control and Option: <kbd>⌃</kbd><kbd>⌥</kbd><kbd>P</kbd> optimise, <kbd>⌃</kbd><kbd>⌥</kbd><kbd>⇧</kbd><kbd>P</kbd> selection, <kbd>⌃</kbd><kbd>⌥</kbd><kbd>D</kbd> voice. Shortcuts must include <kbd>⌃</kbd> or <kbd>⌘</kbd>, because Option alone types characters. In the review window, use <kbd>⌘</kbd> where Windows uses <kbd>Ctrl</kbd> (<kbd>⌘</kbd><kbd>↩</kbd> replace, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> copy, <kbd>⌘</kbd><kbd>R</kbd> re-run).
+
+**Mac update:** when a new version is out, click the notification. The zip is checked against `SHA256SUMS.txt`; an app signed with a Developer ID is then only installed if it's signed by the same developer as your copy. Unsigned release builds can't prove that, so PromptForge shows the checked app in Finder for you to drag into Applications.
+**Mac uninstall:** Settings → Data → **Delete all PromptForge data…** (removes settings, logs, Keychain keys and the login item), then drag PromptForge.app to the Bin.
 
 ## Usage
 
@@ -92,8 +108,10 @@ PromptForge reads and writes text by sending <kbd>Ctrl</kbd>+<kbd>A</kbd> / <kbd
 | Microsoft Word | ✅ Tested | Use *Optimise selection*, because select-all would take the whole document |
 | Voice dictation | ✅ Tested | Uses the same Groq key (Whisper) |
 | Terminals (Windows Terminal, cmd, PowerShell, Claude Code / Codex CLI) | ⚠️ Copy only, by design | Keystrokes in a terminal could interrupt or run commands. Copy your prompt, press the shortcut, then paste the result yourself |
-| Password fields | 🚫 Refused | Detected via UI Automation |
+| Password fields | 🚫 Refused | Detected via UI Automation (Windows), or the Accessibility API and Secure Input (Mac) |
 | Apps running as administrator | ❌ Not possible | Windows blocks input from normal apps into elevated ones. You get a message and can copy instead |
+| Mac: Terminal, iTerm2, Warp, Ghostty and other terminals | ⚠️ Copy only, by design | Same as on Windows: copy, press the shortcut, paste yourself |
+| Mac: apps without Accessibility permission | ❌ Until allowed | System Settings → Privacy & Security → Accessibility → PromptForge |
 
 If a replacement can't be confirmed, the improved prompt goes to your clipboard and a notification tells you. Your original text is never lost.
 
@@ -160,6 +178,8 @@ A typical rewrite uses about 1,200 input tokens, most of which is the cached sys
 - API keys are encrypted with Windows DPAPI for your Windows account (`%APPDATA%\PromptForge\secrets.dat`).
 - No prompt history is stored. Logs (`%APPDATA%\PromptForge\logs`, kept 7 days) contain events and timings only: never prompt text, transcripts or keys.
 - Text PromptForge puts on the clipboard is marked to stay out of Windows clipboard history and cloud sync.
+- On a Mac, keys are stored in your login Keychain, settings in `~/Library/Application Support/PromptForge` and logs in `~/Library/Logs/PromptForge`, both readable only by your account. Text it pastes is marked transient and concealed, so clipboard managers skip it. Dictated audio is held in memory only.
+- API keys are only ever sent over HTTPS. A custom or Ollama address with plain `http://` is accepted only on this computer (`localhost`) or when no key is set.
 
 ## Troubleshooting
 
@@ -176,7 +196,7 @@ A typical rewrite uses about 1,200 input tokens, most of which is the cached sys
 
 ## Build from source
 
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download). The code builds on Windows, Linux or macOS; the app runs on Windows 10/11 x64.
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download). The code builds on Windows, Linux or macOS. The Windows app runs on Windows 10/11 x64; the Mac app runs on macOS 13+ (Apple silicon or Intel).
 
 ```bash
 git clone https://github.com/Maneet7805/PromptForge.git
@@ -185,14 +205,22 @@ dotnet test tests/PromptForge.Core.Tests
 dotnet publish src/PromptForge.App -c Release -o publish
 ```
 
-The output is a single self-contained `publish/PromptForge.exe` (~72 MB). Releases are built by [GitHub Actions](.github/workflows/release.yml) whenever a `v*` tag is pushed.
+The output is a single self-contained `publish/PromptForge.exe` (~72 MB). For the Mac app, run this on a Mac (it needs Xcode's command-line tools for `codesign`, `sips` and `iconutil`):
+
+```bash
+installer/macos/build-app.sh            # this Mac's processor; or pass arm64 / x64
+open dist/macos-arm64/PromptForge.app
+```
+
+Set `SIGN_IDENTITY` to a Developer ID to sign with the hardened runtime, and `NOTARY_PROFILE` to notarize; see the script header. Releases are built by [GitHub Actions](.github/workflows/release.yml) whenever a `v*` tag is pushed.
 
 ```
 src/PromptForge.Core     optimiser pipeline, provider client, settings, eval runner (cross-platform, unit-tested)
 src/PromptForge.App      Windows tray app: hotkeys, text capture/replace, review window, settings, voice, self-install
+src/PromptForge.Mac      Mac menu bar app (Avalonia UI + AppKit, Carbon, Accessibility, Keychain, CoreAudio)
 tests/                   unit tests for the core
 eval/cases.json          optimiser test set
-installer/               uninstall script
+installer/               Windows uninstall script; macOS app bundle, entitlements and build script
 ```
 
 ## Contributing
@@ -207,4 +235,4 @@ Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBU
 
 - [Anthropic's prompt engineering guide](https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview), the basis of the rewriting rules
 - [Groq](https://groq.com) for the free inference tier
-- [DiffPlex](https://github.com/mmanela/diffplex) (word diff) and [NAudio](https://github.com/naudio/NAudio) (microphone capture)
+- [DiffPlex](https://github.com/mmanela/diffplex) (word diff), [NAudio](https://github.com/naudio/NAudio) (Windows microphone capture) and [Avalonia](https://avaloniaui.net) (Mac UI)
